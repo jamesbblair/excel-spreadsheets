@@ -7,12 +7,15 @@ package checkersagent;
 
 import java.io.*;
 import Checkers.*;
+import Checkers.Checker.Color;
+import Checkers.Move;
 
 /**
  *
  * @author james
  */
 public class Main {
+    private static Color oppColor;
 
     /**
      * @param args the command line arguments
@@ -44,39 +47,73 @@ public class Main {
 	    myClient.readAndEcho(); // opponent query
 	    myClient.writeMessageAndEcho(_opponent);  // opponent
 
-	    myClient.setGameID(myClient.readAndEcho().substring(5,9)); // game
+	    myClient.setGameID(myClient.readAndEcho().substring(5)); // game
 	    myClient.setColor(myClient.readAndEcho().substring(6,11));  // color
 	    System.out.println("I am playing as "+myClient.getColor()+ " in game number "+ myClient.getGameID());
 
-            Board our = new Board();
+            Board board = new Board();
 
-            readMessage = myClient.readAndEcho();
+            //readMessage = myClient.readAndEcho();
 	    // depends on color--a black move if i am white, Move:Black:i:j
 	    // otherwise a query to move, ?Move(time):
+            String strMove;
+            Move myMove;
+            Player me = null;
+
 	    if (myClient.getColor().equals("White")) {
-                Player me = new Player(Checker.Color.white);
+                me = new Player(Checker.Color.white);
+                oppColor=Color.black;
 
                 readMessage = myClient.readAndEcho();  // black move
-		while(!readMessage.substring(0,5).equals("Result")){
-                    our = me.nextBoard(our);
-		}
+                strMove = readMessage.substring(11);
+                System.out.println(strMove);
+                Move oppMove = new Move(strMove);
+                board = board.nextBoard(oppMove);
+
 	    }
 	    else {
-                Player me = new Player(Checker.Color.black);
+                me = new Player(Checker.Color.black);
+                oppColor=Color.white;
 
                 readMessage = myClient.readAndEcho(); //the first request
+            }
 
-                while(!readMessage.substring(0,5).equals("Result")){
+            while(!readMessage.contains("Result") || !readMessage.contains("Error")){
+                    board = me.nextBoard(board);
+                    myMove = board.getLastMove();
+                    myClient.writeMessageAndEcho(myMove.outputForm());
+                    myClient.readAndEcho();
+                    readMessage = myClient.readAndEcho();
+                    if(readMessage.contains("Result") || readMessage.contains("Error")){
+                        break;
+                    }
+                    strMove = readMessage.substring(11); // ...possibly +-1
+                    Move oppMove = new Move(strMove);
+                    board = board.nextBoard(oppMove);
+                    readMessage = myClient.readAndEcho();
+            }
 
-
-		}
-	    }
+            if(readMessage.contains("Result") || readMessage.contains("Error")){
+                System.out.println(readMessage+" ...I'm done.");
+                System.exit(0);
+            }
 
 	    myClient.getSocket().close();
 	} catch  (IOException e) {
 	    System.out.println("Failed in read/close");
 	    System.exit(1);
 	}
+        //testing unexpected exit
+        System.out.println("Client left game unexpectedly");
+        System.exit(1);
+    }
+        private static boolean isOppMove(String msg) {
+        String oppc;
+        if (oppColor.equals(Color.black))
+            oppc = "Black";
+        else
+            oppc = "White";
+        return msg.startsWith("Move:"+oppc);
     }
 
 }
