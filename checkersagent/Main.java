@@ -68,8 +68,8 @@ public class Main {
                 strMove = readMessage.substring(11);
                 System.out.println(strMove);
                 Move oppMove = new Move(strMove);
-                board = board.nextBoard(oppMove);
-
+                board = Board.nextBoard(oppMove,board);
+                readMessage = myClient.readAndEcho();
 	    }
 	    else {
                 me = new Player(Checker.Color.black);
@@ -78,23 +78,24 @@ public class Main {
                 readMessage = myClient.readAndEcho(); //the first request
             }
 
-            while(!readMessage.contains("Result") || !readMessage.contains("Error")){
+            while(!readMessage.contains("Result") || !readMessage.contains("Error") || !readMessage.contains("Draw")){
                     board = me.nextBoard(board);
                     myMove = board.getLastMove();
                     myClient.writeMessageAndEcho(myMove.outputForm());
                     myClient.readAndEcho();
                     readMessage = myClient.readAndEcho();
-                    if(readMessage.contains("Result") || readMessage.contains("Error")){
+                    if(readMessage.contains("Result") || readMessage.contains("Error") || readMessage.contains("Draw")){
                         break;
                     }
                     strMove = readMessage.substring(11); // ...possibly +-1
                     Move oppMove = new Move(strMove);
-                    board = board.nextBoard(oppMove);
+                    board = Board.nextBoard(oppMove,board);
                     readMessage = myClient.readAndEcho();
             }
 
-            if(readMessage.contains("Result") || readMessage.contains("Error")){
+            if(readMessage.contains("Result") || readMessage.contains("Error") || readMessage.contains("Draw")){
                 System.out.println(readMessage+" ...I'm done.");
+                myClient.getSocket().close();
                 System.exit(0);
             }
 
@@ -106,14 +107,6 @@ public class Main {
         //testing unexpected exit
         System.out.println("Client left game unexpectedly");
         System.exit(1);
-    }
-        private static boolean isOppMove(String msg) {
-        String oppc;
-        if (oppColor.equals(Color.black))
-            oppc = "Black";
-        else
-            oppc = "White";
-        return msg.startsWith("Move:"+oppc);
     }
 
 }
